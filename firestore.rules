@@ -1,0 +1,158 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Connection verification endpoint
+    match /test/{docId} {
+      allow read: if isSignedIn();
+    }
+
+    // User Profile
+    function isValidUserProfile(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+             (!('age' in data) || (data.age is number && data.age >= 0 && data.age <= 130)) &&
+             (!('gender' in data) || (data.gender in ['male', 'female', 'other', 'prefer_not_to_say'])) &&
+             (!('hasHypertensionDiagnosis' in data) || data.hasHypertensionDiagnosis is bool) &&
+             (!('takingMedication' in data) || data.takingMedication is bool) &&
+             (!('targetSys' in data) || (data.targetSys is number && data.targetSys >= 80 && data.targetSys <= 200)) &&
+             (!('targetDia' in data) || (data.targetDia is number && data.targetDia >= 40 && data.targetDia <= 120)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 60)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 60));
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().uid == request.auth.uid &&
+                       isValidUserProfile(incoming());
+      allow update: if isOwner(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().uid == existing().uid &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'age', 'gender', 'hasHypertensionDiagnosis', 'takingMedication', 'targetSys', 'targetDia', 'updatedAt']);
+      allow delete: if isOwner(userId);
+
+      // BP Records subcollection (TSH 7-Day Protocol)
+      function isValidBPRecord(data) {
+        return data.userId is string && data.userId == request.auth.uid &&
+               data.dayIndex is number && data.dayIndex >= 1 && data.dayIndex <= 7 &&
+               data.period in ['morning', 'evening'] &&
+               data.date is string && data.date.size() <= 10 &&
+               data.avgSys is number && data.avgSys >= 40 && data.avgSys <= 300 &&
+               data.avgDia is number && data.avgDia >= 20 && data.avgDia <= 200 &&
+               data.avgPulse is number && data.avgPulse >= 30 && data.avgPulse <= 250 &&
+               data.category in ['optimal', 'normal', 'high_normal', 'stage1', 'stage2', 'crisis'] &&
+               (!('id' in data) || (data.id is string && data.id.size() <= 128)) &&
+               (!('sessionId' in data) || (data.sessionId is string && data.sessionId.size() <= 128)) &&
+               (!('measuredAt' in data) || (data.measuredAt is string && data.measuredAt.size() <= 40)) &&
+               (!('sys1' in data) || (data.sys1 is number && data.sys1 >= 40 && data.sys1 <= 300)) &&
+               (!('dia1' in data) || (data.dia1 is number && data.dia1 >= 20 && data.dia1 <= 200)) &&
+               (!('pulse1' in data) || (data.pulse1 is number && data.pulse1 >= 30 && data.pulse1 <= 250)) &&
+               (!('sys2' in data) || (data.sys2 is number && data.sys2 >= 40 && data.sys2 <= 300)) &&
+               (!('dia2' in data) || (data.dia2 is number && data.dia2 >= 20 && data.dia2 <= 200)) &&
+               (!('pulse2' in data) || (data.pulse2 is number && data.pulse2 >= 30 && data.pulse2 <= 250)) &&
+               (!('sys3' in data) || (data.sys3 is number && data.sys3 >= 40 && data.sys3 <= 300)) &&
+               (!('dia3' in data) || (data.dia3 is number && data.dia3 >= 20 && data.dia3 <= 200)) &&
+               (!('pulse3' in data) || (data.pulse3 is number && data.pulse3 >= 30 && data.pulse3 <= 250)) &&
+               (!('armUsed' in data) || (data.armUsed in ['left', 'right'])) &&
+               (!('medicationTaken' in data) || data.medicationTaken is bool) &&
+               (!('symptoms' in data) || (data.symptoms is string && data.symptoms.size() <= 300)) &&
+               (!('note' in data) || (data.note is string && data.note.size() <= 300)) &&
+               (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 60)) &&
+               (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 60));
+      }
+
+      match /records/{recordId} {
+        allow get: if isOwner(userId) && isValidId(recordId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(recordId) &&
+                         isValidBPRecord(incoming());
+        allow update: if isOwner(userId) &&
+                         isValidId(recordId) &&
+                         isValidBPRecord(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'dayIndex', 'period', 'date', 'measuredAt', 'sys1', 'dia1', 'pulse1',
+                           'sys2', 'dia2', 'pulse2', 'sys3', 'dia3', 'pulse3',
+                           'avgSys', 'avgDia', 'avgPulse', 'category', 'armUsed', 'medicationTaken',
+                           'symptoms', 'note', 'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidId(recordId);
+      }
+
+      // Monitoring Sessions (7-day programs)
+      function isValidMonitoringSession(data) {
+        return data.userId is string && data.userId == request.auth.uid &&
+               data.startDate is string && data.startDate.size() <= 10 &&
+               data.status in ['in_progress', 'completed', 'archived'] &&
+               (!('id' in data) || (data.id is string && data.id.size() <= 128)) &&
+               (!('endDate' in data) || (data.endDate is string && data.endDate.size() <= 10)) &&
+               (!('title' in data) || (data.title is string && data.title.size() <= 120)) &&
+               (!('completedReadingsCount' in data) || (data.completedReadingsCount is number && data.completedReadingsCount >= 0 && data.completedReadingsCount <= 28)) &&
+               (!('tshAverageSys' in data) || data.tshAverageSys is number) &&
+               (!('tshAverageDia' in data) || data.tshAverageDia is number) &&
+               (!('tshAveragePulse' in data) || data.tshAveragePulse is number) &&
+               (!('overallAverageSys' in data) || data.overallAverageSys is number) &&
+               (!('overallAverageDia' in data) || data.overallAverageDia is number) &&
+               (!('morningAverageSys' in data) || data.morningAverageSys is number) &&
+               (!('morningAverageDia' in data) || data.morningAverageDia is number) &&
+               (!('eveningAverageSys' in data) || data.eveningAverageSys is number) &&
+               (!('eveningAverageDia' in data) || data.eveningAverageDia is number) &&
+               (!('tshDiagnosis' in data) || (data.tshDiagnosis is string && data.tshDiagnosis.size() <= 100)) &&
+               (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 60)) &&
+               (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 60));
+      }
+
+      match /sessions/{sessionId} {
+        allow get: if isOwner(userId) && isValidId(sessionId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(sessionId) &&
+                         isValidMonitoringSession(incoming());
+        allow update: if isOwner(userId) &&
+                         isValidId(sessionId) &&
+                         isValidMonitoringSession(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'endDate', 'title', 'status', 'completedReadingsCount',
+                           'tshAverageSys', 'tshAverageDia', 'tshAveragePulse',
+                           'overallAverageSys', 'overallAverageDia',
+                           'morningAverageSys', 'morningAverageDia',
+                           'eveningAverageSys', 'eveningAverageDia',
+                           'tshDiagnosis', 'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidId(sessionId);
+      }
+    }
+  }
+}

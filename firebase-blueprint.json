@@ -1,0 +1,287 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Patient user profile containing demographics, health targets, and protocol preferences",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "User UID matching auth.uid",
+          "maxLength": 128
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Patient full name or nickname",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "description": "Patient email address",
+          "maxLength": 120
+        },
+        "age": {
+          "type": "number",
+          "description": "Patient age in years"
+        },
+        "gender": {
+          "type": "string",
+          "description": "Patient biological gender",
+          "enum": ["male", "female", "other", "prefer_not_to_say"]
+        },
+        "hasHypertensionDiagnosis": {
+          "type": "boolean",
+          "description": "Whether the patient has been diagnosed with hypertension"
+        },
+        "takingMedication": {
+          "type": "boolean",
+          "description": "Whether the patient is currently taking antihypertensive medication"
+        },
+        "targetSys": {
+          "type": "number",
+          "description": "Target systolic blood pressure (TSH default < 135 mmHg)"
+        },
+        "targetDia": {
+          "type": "number",
+          "description": "Target diastolic blood pressure (TSH default < 85 mmHg)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp or server timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp or server timestamp"
+        }
+      },
+      "required": ["uid", "displayName"]
+    },
+    "BPRecord": {
+      "title": "BPRecord",
+      "description": "TSH 7-day protocol blood pressure record. Each measurement session contains 2 readings with calculated averages.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique record document ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID",
+          "maxLength": 128
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "ID of the 7-day monitoring program session",
+          "maxLength": 128
+        },
+        "dayIndex": {
+          "type": "number",
+          "description": "Day index within the 7-day program (1 to 7)"
+        },
+        "period": {
+          "type": "string",
+          "description": "Time of day measurement period according to TSH",
+          "enum": ["morning", "evening"]
+        },
+        "date": {
+          "type": "string",
+          "description": "Date string YYYY-MM-DD",
+          "maxLength": 10
+        },
+        "measuredAt": {
+          "type": "string",
+          "description": "Time string HH:mm or ISO timestamp",
+          "maxLength": 40
+        },
+        "sys1": {
+          "type": "number",
+          "description": "Systolic reading 1 (mmHg)"
+        },
+        "dia1": {
+          "type": "number",
+          "description": "Diastolic reading 1 (mmHg)"
+        },
+        "pulse1": {
+          "type": "number",
+          "description": "Pulse rate reading 1 (bpm)"
+        },
+        "sys2": {
+          "type": "number",
+          "description": "Systolic reading 2 (mmHg)"
+        },
+        "dia2": {
+          "type": "number",
+          "description": "Diastolic reading 2 (mmHg)"
+        },
+        "pulse2": {
+          "type": "number",
+          "description": "Pulse rate reading 2 (bpm)"
+        },
+        "sys3": {
+          "type": "number",
+          "description": "Optional systolic reading 3 if difference > 5 mmHg"
+        },
+        "dia3": {
+          "type": "number",
+          "description": "Optional diastolic reading 3"
+        },
+        "pulse3": {
+          "type": "number",
+          "description": "Optional pulse rate reading 3"
+        },
+        "avgSys": {
+          "type": "number",
+          "description": "Mean systolic blood pressure for this session (mmHg)"
+        },
+        "avgDia": {
+          "type": "number",
+          "description": "Mean diastolic blood pressure for this session (mmHg)"
+        },
+        "avgPulse": {
+          "type": "number",
+          "description": "Mean pulse rate for this session (bpm)"
+        },
+        "category": {
+          "type": "string",
+          "description": "TSH hypertension classification",
+          "enum": ["optimal", "normal", "high_normal", "stage1", "stage2", "crisis"]
+        },
+        "armUsed": {
+          "type": "string",
+          "description": "Arm used for measurement (left/right)",
+          "enum": ["left", "right"]
+        },
+        "medicationTaken": {
+          "type": "boolean",
+          "description": "Whether BP medication was taken prior to this measurement"
+        },
+        "symptoms": {
+          "type": "string",
+          "description": "Any noted symptoms (headache, dizziness, chest discomfort, etc.)",
+          "maxLength": 300
+        },
+        "note": {
+          "type": "string",
+          "description": "Additional notes by user",
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Server or ISO timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Server or ISO timestamp"
+        }
+      },
+      "required": ["userId", "dayIndex", "period", "date", "avgSys", "avgDia", "avgPulse", "category"]
+    },
+    "MonitoringSession": {
+      "title": "MonitoringSession",
+      "description": "A 7-day blood pressure monitoring protocol run (TSH HBPM)",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Session ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "User ID of patient",
+          "maxLength": 128
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Start date YYYY-MM-DD",
+          "maxLength": 10
+        },
+        "endDate": {
+          "type": "string",
+          "description": "End date YYYY-MM-DD (typically startDate + 6 days)",
+          "maxLength": 10
+        },
+        "title": {
+          "type": "string",
+          "description": "Title or doctor visit context",
+          "maxLength": 120
+        },
+        "status": {
+          "type": "string",
+          "description": "Session progress status",
+          "enum": ["in_progress", "completed", "archived"]
+        },
+        "completedReadingsCount": {
+          "type": "number",
+          "description": "Total readings completed (out of 14 sessions: 7 days x 2)"
+        },
+        "tshAverageSys": {
+          "type": "number",
+          "description": "Day 2-7 average systolic blood pressure (TSH standard)"
+        },
+        "tshAverageDia": {
+          "type": "number",
+          "description": "Day 2-7 average diastolic blood pressure (TSH standard)"
+        },
+        "tshAveragePulse": {
+          "type": "number",
+          "description": "Day 2-7 average pulse rate"
+        },
+        "overallAverageSys": {
+          "type": "number",
+          "description": "Full 7-day average systolic"
+        },
+        "overallAverageDia": {
+          "type": "number",
+          "description": "Full 7-day average diastolic"
+        },
+        "morningAverageSys": {
+          "type": "number",
+          "description": "Average morning systolic"
+        },
+        "morningAverageDia": {
+          "type": "number",
+          "description": "Average morning diastolic"
+        },
+        "eveningAverageSys": {
+          "type": "number",
+          "description": "Average evening systolic"
+        },
+        "eveningAverageDia": {
+          "type": "number",
+          "description": "Average evening diastolic"
+        },
+        "tshDiagnosis": {
+          "type": "string",
+          "description": "TSH interpretation (e.g., Controlled, Uncontrolled, White-coat, Masked)",
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp"
+        }
+      },
+      "required": ["userId", "startDate", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Patient user profile containing personal settings and targets"
+    },
+    "/users/{userId}/records/{recordId}": {
+      "schema": "BPRecord",
+      "description": "Blood pressure readings recorded by patient (7 days x 2 periods)"
+    },
+    "/users/{userId}/sessions/{sessionId}": {
+      "schema": "MonitoringSession",
+      "description": "7-day monitoring program track and summary records"
+    }
+  }
+}

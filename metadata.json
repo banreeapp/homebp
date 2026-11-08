@@ -1,0 +1,6 @@
+{
+  "name": "Thai Hypertension Home BP Monitor (TSH)",
+  "description": "ระบบบันทึกและติดตามความดันโลหิตที่บ้าน 7 วัน เช้า-เย็น ตามแนวทางสมาคมความดันโลหิตสูงแห่งประเทศไทย (Thai Society of Hypertension - TSH)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
